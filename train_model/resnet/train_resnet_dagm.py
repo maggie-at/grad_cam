@@ -14,19 +14,19 @@ from model import resnet34
 def train(num_classes):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print("using {} device.".format(device))
-
+    
     data_transform = {
-        "train": transforms.Compose([transforms.RandomResizedCrop(224),
+        "train": transforms.Compose([transforms.RandomResizedCrop(300),
                                      transforms.RandomHorizontalFlip(),
                                      transforms.ToTensor(),
                                      transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])]),
-        "val": transforms.Compose([transforms.Resize(256),
+        "val": transforms.Compose([transforms.Resize(300),
                                    transforms.CenterCrop(224),
                                    transforms.ToTensor(),
                                    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])}
-
-    data_root = "/home/huyu/codes/exp1/"  # get data root path
-    image_path = os.path.join(data_root, "HEGANG/")  # flower data set path
+    
+    data_root = "/home/ubuntu/workspace/hy/dataset/"  # get data root path
+    image_path = os.path.join(data_root, "DAGM/")  # flower data set path
     assert os.path.exists(image_path), "{} path does not exist.".format(image_path)
     train_dataset = datasets.ImageFolder(root=os.path.join(image_path, "train"),
                                          transform=data_transform["train"])
@@ -80,7 +80,7 @@ def train(num_classes):
 
     epochs = 10
     best_acc = 0.0
-    save_path = './resNet34-hegang-5.pth'
+    save_path = './resNet34-dagm.pth'
     train_steps = len(train_loader)
     for epoch in range(epochs):
         net.train()
@@ -128,4 +128,4 @@ def train(num_classes):
 
 
 if __name__ == '__main__':
-    train(num_classes = 5)
+    train(num_classes = 2)

@@ -1,6 +1,14 @@
 import cv2
 import numpy as np
+from pyssim import SSIM  
 
+
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))
+
+def calculate_ssim(img1, img2):  
+    ssim_calculator = SSIM(img1)  
+    return ssim_calculator.compute_ssim(img2)  
 
 class ActivationsAndGradients:
     """ Class for extracting activations and
@@ -108,11 +116,27 @@ class GradCAM:
             cam_per_target_layer.append(scaled[:, None, :])
 
         return cam_per_target_layer
+    
+    
+    # def aggregate_multi_layers(self, cam_per_target_layer):
+    #     cam_per_target_layer = np.concatenate(cam_per_target_layer, axis=1)
+    #     cam_per_target_layer = np.maximum(cam_per_target_layer, 0)
+    #     result = np.mean(cam_per_target_layer, axis=1)
+    #     return self.scale_cam_image(result)
 
     def aggregate_multi_layers(self, cam_per_target_layer):
         cam_per_target_layer = np.concatenate(cam_per_target_layer, axis=1)
         cam_per_target_layer = np.maximum(cam_per_target_layer, 0)
-        result = np.mean(cam_per_target_layer, axis=1)
+    
+        last_layer = cam_per_target_layer[-1]
+        
+        # 计算每一层与最后一层的SSIM，并使用sigmoid函数将其映射到0～1之间作为权重
+        weights = [calculate_ssim(layer, last_layer) for layer in cam_per_target_layer]
+        weights = sigmoid(np.array(weights))  # 使用sigmoid函数
+    
+        # 使用权重对每一层进行加权平均
+        result = np.average(cam_per_target_layer, axis=1, weights=weights)
+        
         return self.scale_cam_image(result)
 
     @staticmethod
