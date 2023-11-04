@@ -1,14 +1,10 @@
 import cv2
 import numpy as np
-from pyssim import SSIM  
+from skimage.metrics import structural_similarity as ssim
 
 
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
-
-def calculate_ssim(img1, img2):  
-    ssim_calculator = SSIM(img1)  
-    return ssim_calculator.compute_ssim(img2)  
 
 class ActivationsAndGradients:
     """ Class for extracting activations and
@@ -114,7 +110,6 @@ class GradCAM:
             cam[cam < 0] = 0  # works like mute the min-max scale in the function of scale_cam_image
             scaled = self.scale_cam_image(cam, target_size)
             cam_per_target_layer.append(scaled[:, None, :])
-
         return cam_per_target_layer
     
     
@@ -123,21 +118,32 @@ class GradCAM:
     #     cam_per_target_layer = np.maximum(cam_per_target_layer, 0)
     #     result = np.mean(cam_per_target_layer, axis=1)
     #     return self.scale_cam_image(result)
-
+  
     def aggregate_multi_layers(self, cam_per_target_layer):
-        cam_per_target_layer = np.concatenate(cam_per_target_layer, axis=1)
-        cam_per_target_layer = np.maximum(cam_per_target_layer, 0)
-    
-        last_layer = cam_per_target_layer[-1]
+        # 长度为target_layers的数量
+        cam_per_target_layer = np.concatenate(cam_per_target_layer, axis=1)  # 形状[1,3,512,512]
+        cam_per_target_layer = np.maximum(cam_per_target_layer, 0)  # ReLU
+
+        # 取最后一层CAM
+        last_layer_cam = cam_per_target_layer[:, -1:, :, :]
+
+        # 初始化权重
+        weights = np.zeros((cam_per_target_layer.shape[1],))
         
-        # 计算每一层与最后一层的SSIM，并使用sigmoid函数将其映射到0～1之间作为权重
-        weights = [calculate_ssim(layer, last_layer) for layer in cam_per_target_layer]
-        weights = sigmoid(np.array(weights))  # 使用sigmoid函数
-    
-        # 使用权重对每一层进行加权平均
-        result = np.average(cam_per_target_layer, axis=1, weights=weights)
+        # 计算每层与最后一层的结构相似度，作为权重
+        for i in range(cam_per_target_layer.shape[1]):
+            layer_cam = cam_per_target_layer[:, i:i+1, :, :]
+            similarity = ssim(layer_cam.squeeze(), last_layer_cam.squeeze(), data_range=1.0)
+            weights[i] = max(similarity, 0)
+        
+        # print(weights)
+        normalized_weights = weights / np.sum(weights)
+
+        # 使用权重计算加权平均
+        result = np.sum(cam_per_target_layer * normalized_weights.reshape(1, -1, 1, 1), axis=1)
         
         return self.scale_cam_image(result)
+
 
     @staticmethod
     def scale_cam_image(cam, target_size=None):
@@ -186,7 +192,7 @@ class GradCAM:
 
     def __del__(self):
         self.activations_and_grads.release()
-
+  
     def __enter__(self):
         return self
 

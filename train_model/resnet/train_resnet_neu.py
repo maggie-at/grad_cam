@@ -27,7 +27,7 @@ def train(num_classes):
                                    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])}
 
     data_root = "/home/ubuntu/workspace/hy/dataset/"  # get data root path
-    image_path = os.path.join(data_root, "NEU-CLS/")  # flower data set path
+    image_path = os.path.join(data_root, "NEU-DET/")  # flower data set path
     assert os.path.exists(image_path), "{} path does not exist.".format(image_path)
     train_dataset = datasets.ImageFolder(root=os.path.join(image_path, "train"),
                                          transform=data_transform["train"])
@@ -79,9 +79,9 @@ def train(num_classes):
     params = [p for p in net.parameters() if p.requires_grad]
     optimizer = optim.Adam(params, lr=0.0001)
 
-    epochs = 10
+    epochs = 5
     best_acc = 0.0
-    save_path = './resNet34-dagm.pth'
+    save_path = './resNet34-neu.pth'
     train_steps = len(train_loader)
     for epoch in range(epochs):
         net.train()

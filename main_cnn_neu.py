@@ -11,19 +11,19 @@ from torchvision import models, transforms
 
 from utils.layer_utils import GradCAM, show_cam_on_image
 
-cls_dict={'class_name_0': 0,
-          'class_name_10': 1,
-          'class_name_2': 2,
-          'class_name_7': 3,
-          'class_name_8': 4}
+cls_dict={'crazing': 0,
+          'inclusion': 1,
+          'patches': 2,
+          'pitted': 3,
+          'rolled': 4,
+          "scratches": 5}
 
 def cnn_cam(data_path, res_path, num_classes):
     model = models.resnet34()
     in_channel = model.fc.in_features
     model.fc = torch.nn.Linear(in_channel, num_classes)
-    model.load_state_dict(torch.load('./train_model/resnet/resNet34-hegang-5.pth', map_location='cpu'))
-    
-    target_layers = [model.layer3, model.layer4]
+    model.load_state_dict(torch.load('./train_model/resnet/resNet34-neu.pth', map_location='cpu'))
+    target_layers = [model.layer4[2].conv2]
 
     # model = models.mobilenet_v3_large(pretrained=True)
     # target_layers = [model.features[-1]]
@@ -58,6 +58,7 @@ def cnn_cam(data_path, res_path, num_classes):
             # load image
             assert os.path.exists(img_path), "file: '{}' dose not exist.".format(img_path)
             img = Image.open(img_path).convert('RGB')
+            
             img = np.array(img, dtype=np.uint8)
 
             # [C, H, W]
@@ -77,7 +78,7 @@ def cnn_cam(data_path, res_path, num_classes):
             low = 80
             mid = 127
             high = 170
-            thresh = [high, high, high, high, high]
+            thresh = [mid, mid, mid, mid, mid, mid]
             _, thresh = cv2.threshold(grayscale_cam_8bit, thresh[cls_dict[cls_folder]], 255, cv2.THRESH_BINARY)
             
             # 画出预测框
@@ -86,7 +87,7 @@ def cnn_cam(data_path, res_path, num_classes):
                 x, y, w, h = cv2.boundingRect(contour)
                 area = w * h
                 # 忽略面积小于64的预测框
-                if area >= 64:
+                if area >= 49:
                     cv2.rectangle(img, (x, y), (x+w, y+h), (0, 255, 0), 2)
             cv2.imwrite(os.path.join(res_folder_path, "bbox/", img_file), img)
 
@@ -94,10 +95,10 @@ def cnn_cam(data_path, res_path, num_classes):
             with open(os.path.join(res_folder_path, "label/", img_file.split('.')[0] + '.txt'), 'w') as f:
                 for contour in contours:
                     x, y, w, h = cv2.boundingRect(contour)
-                    f.write(f"{x}, {y}, {x+w}, {y+h}\n")
+                    f.write(f"{x} {y} {x+w} {y+h}\n")
 
 
 if __name__ == '__main__':
-    cnn_cam(data_path='/home/ubuntu/workspace/hy/dataset/1025_fuhe/val/', 
-            res_path='/home/ubuntu/workspace/hy/dataset/1025_fuhe/Multi_CLS/predict/',
-            num_classes=5)
+    cnn_cam(data_path='/home/ubuntu/workspace/hy/dataset/NEU-DET/val/', 
+            res_path='/home/ubuntu/workspace/hy/dataset/NEU-DET/predict/',
+            num_classes=6)

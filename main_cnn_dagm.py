@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import torch
 from torchvision import models, transforms
 
-from utils.weight_utils import GradCAM, show_cam_on_image
+from utils.layer_utils import GradCAM, show_cam_on_image
 
 def cnn_cam(data_path, res_path, num_classes):
     model = models.resnet34()
@@ -17,7 +17,12 @@ def cnn_cam(data_path, res_path, num_classes):
     model.fc = torch.nn.Linear(in_channel, num_classes)
     model.load_state_dict(torch.load('./train_model/resnet/resNet34-dagm.pth', map_location='cpu'))
     
-    target_layers = [model.layer2, model.layer3, model.layer4]
+    # LayerCam & WeightCam替换一下utils文件
+    # target_layers = [model.layer2, model.layer3, model.layer4]
+
+    # GradCam
+    target_layers = [model.layer4[2].conv2]
+
 
     # model = models.mobilenet_v3_large(pretrained=True)
     # target_layers = [model.features[-1]]
